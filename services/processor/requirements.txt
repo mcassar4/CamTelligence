@@ -1,0 +1,7 @@
+-e services/core
+numpy>=1.26
+opencv-python-headless>=4.8.0
+pydantic>=1.10,<2.01
+psycopg2-binary>=2.9
+ultralytics>=8.0.20
+tf-keras>=2.20,<2.21
