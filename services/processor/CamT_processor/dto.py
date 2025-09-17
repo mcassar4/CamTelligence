@@ -16,3 +16,9 @@ class FrameJob:
     camera: str
     captured_at: datetime
     image_bytes: bytes
+
+@dataclass(frozen=True)
+class Detection:
+    bbox: Tuple[int, int, int, int]
+    score: float
+    crop_bytes: bytes
