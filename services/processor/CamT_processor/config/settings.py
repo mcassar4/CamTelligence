@@ -12,6 +12,10 @@ class ProcessorSettings(BaseSettings):
     motion_min_area: int = Field(1500, env="MOTION_MIN_AREA")
     motion_debug_dir: str = Field("/data/motion_results", env="MOTION_DEBUG_DIR")
     motion_max_foreground_ratio: float = Field(0.1, env="MOTION_MAX_FOREGROUND_RATIO")
+    yolo_model_path: Optional[str] = Field(None, env="YOLO_MODEL_PATH")
+    yolo_conf_threshold: Optional[float] = Field(None, env="YOLO_CONF_THRESHOLD")
+    yolo_iou_threshold: Optional[float] = Field(None, env="YOLO_IOU_THRESHOLD")
+    yolo_vehicle_conf: Optional[float] = Field(None, env="YOLO_VEHICLE_CONF")
 
     class Config:
         env_file = ".env"
