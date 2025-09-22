@@ -47,7 +47,10 @@ class DetectionWorker(Process):
         logger.info("Detection worker started")
         while not self.stop_event.is_set():
             job = self.frame_queue.get()
-            
+            if isinstance(job, PoisonPill):
+                self._fanout_poison()
+                break
+            self._maybe_warn_queue_backpressure(job.camera)
             motion_boxes = []
             try:
                 image = decode_image(job.image_bytes)
@@ -134,3 +137,40 @@ class DetectionWorker(Process):
                         }
                     },
                 )
+        self._fanout_poison()
+
+    def _fanout_poison(self) -> None:
+        try:
+            self.person_queue.put_nowait(PoisonPill())
+            self.vehicle_queue.put_nowait(PoisonPill())
+        except Exception:
+            pass
+
+    def _safe_put(self, queue: Queue, item) -> None:
+        while not self.stop_event.is_set():
+            try:
+                queue.put(item, timeout=0.5)
+                return
+            except Exception:
+                continue
+
+    def _maybe_warn_queue_backpressure(self, camera: str) -> None:
+        """Warn if the frame queue is filling faster than we process."""
+        now = time.monotonic()
+        if now - self._last_queue_warn < self._queue_warn_interval:
+            return
+        try:
+            qsize = self.frame_queue.qsize()
+        except Exception:
+            return
+        maxsize = getattr(self.frame_queue, "_maxsize", 0) or 0
+        if maxsize > 0:
+            threshold = max(1, int(maxsize * 0.7))
+        else:
+            threshold = 10  # fallback heuristic
+        if qsize >= threshold:
+            self._last_queue_warn = now
+            logger.warning(
+                "Detection backlog is growing; consider reducing ingestion rate or increasing worker capacity",
+                extra={"extra_payload": {"frame_queue_size": qsize, "frame_queue_maxsize": maxsize, "camera": camera}},
+            )
