@@ -40,6 +40,7 @@ class DetectionWorker(Process):
         self.cam_buffers_init: dict[str, bool] = {}
         self._last_queue_warn = 0.0
         self._queue_warn_interval = 5.0  # seconds
+        self.motion_overlap_threshold = 0.2  # motion must cover at least 20% of a YOLO box
 
 
     def run(self) -> None:
@@ -92,8 +93,11 @@ class DetectionWorker(Process):
                 image = None
                 continue
 
-            persons = predictions.get("persons") if predictions else None
-            vehicles = predictions.get("vehicles") if predictions else None
+            persons_raw = predictions.get("persons") if predictions else []
+            vehicles_raw = predictions.get("vehicles") if predictions else []
+
+            persons = self._filter_by_motion_overlap(persons_raw, motion_boxes)
+            vehicles = self._filter_by_motion_overlap(vehicles_raw, motion_boxes)
 
             if persons:
                 self._safe_put(
@@ -153,6 +157,52 @@ class DetectionWorker(Process):
                 return
             except Exception:
                 continue
+
+    def _filter_by_motion_overlap(self, detections, motion_boxes: list[tuple[int, int, int, int]]):
+        """Keep YOLO detections only if motion overlaps >= threshold of their area."""
+        if not detections or not motion_boxes:
+            return []
+        filtered = []
+        for det in detections:
+            if self._has_motion_overlap(det.bbox, motion_boxes):
+                filtered.append(det)
+        if detections and filtered != detections:
+            logger.debug(
+                "Filtered detections by motion overlap",
+                extra={
+                    "extra_payload": {
+                        "kept": len(filtered),
+                        "dropped": len(detections) - len(filtered),
+                        "threshold": self.motion_overlap_threshold,
+                    }
+                },
+            )
+        return filtered
+
+    def _has_motion_overlap(self, bbox: tuple[int, int, int, int], motion_boxes: list[tuple[int, int, int, int]]) -> bool:
+        x1, y1, w, h = bbox
+        if w <= 0 or h <= 0:
+            return False
+        x2 = x1 + w
+        y2 = y1 + h
+        det_area = float(w * h)
+        threshold_area = det_area * self.motion_overlap_threshold
+
+        for mx, my, mw, mh in motion_boxes:
+            if mw <= 0 or mh <= 0:
+                continue
+            mx2 = mx + mw
+            my2 = my + mh
+
+            inter_w = min(x2, mx2) - max(x1, mx)
+            inter_h = min(y2, my2) - max(y1, my)
+            if inter_w <= 0 or inter_h <= 0:
+                continue
+
+            inter_area = inter_w * inter_h
+            if inter_area >= threshold_area:
+                return True
+        return False
 
     def _maybe_warn_queue_backpressure(self, camera: str) -> None:
         """Warn if the frame queue is filling faster than we process."""
