@@ -88,3 +88,49 @@ class DetectionWorker(Process):
                 predictions = None
                 image = None
                 continue
+
+            persons = predictions.get("persons") if predictions else None
+            vehicles = predictions.get("vehicles") if predictions else None
+
+            if persons:
+                self._safe_put(
+                    self.person_queue,
+                    PersonDetections(
+                        frame_id=job.frame_id,
+                        camera=job.camera,
+                        captured_at=job.captured_at,
+                        frame_bytes=job.image_bytes,
+                        persons=persons,
+                    ),
+                )
+                logger.debug(
+                    "Enqueued person detections",
+                    extra={
+                        "extra_payload": {
+                            "camera": job.camera,
+                            "frame_id": str(job.frame_id),
+                            "count": len(persons),
+                        }
+                    },
+                )
+            if vehicles:
+                self._safe_put(
+                    self.vehicle_queue,
+                    VehicleDetections(
+                        frame_id=job.frame_id,
+                        camera=job.camera,
+                        captured_at=job.captured_at,
+                        frame_bytes=job.image_bytes,
+                        vehicles=vehicles,
+                    ),
+                )
+                logger.debug(
+                    "Enqueued vehicle detections",
+                    extra={
+                        "extra_payload": {
+                            "camera": job.camera,
+                            "frame_id": str(job.frame_id),
+                            "count": len(vehicles),
+                        }
+                    },
+                )

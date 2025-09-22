@@ -22,3 +22,21 @@ class Detection:
     bbox: Tuple[int, int, int, int]
     score: float
     crop_bytes: bytes
+
+
+@dataclass(frozen=True)
+class PersonDetections:
+    frame_id: UUID
+    camera: str
+    captured_at: datetime
+    frame_bytes: bytes
+    persons: list[Detection]
+
+
+@dataclass(frozen=True)
+class VehicleDetections:
+    frame_id: UUID
+    camera: str
+    captured_at: datetime
+    frame_bytes: bytes
+    vehicles: list[Detection]
