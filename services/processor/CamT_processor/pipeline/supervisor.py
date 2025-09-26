@@ -1,11 +1,15 @@
 import logging
 import os
+import signal
+import time
 from multiprocessing import Event, Queue, set_start_method
 
 from ..config.settings import ProcessorSettings
+from ..dto import PoisonPill
 from ..logging_utils import configure_logging
-from .ingestion import IngestionWorker, parse_camera_sources
 from .detection import DetectionWorker
+from .ingestion import IngestionWorker, parse_camera_sources
+
 
 logger = logging.getLogger("processor.supervisor")
 
@@ -47,3 +51,17 @@ class Supervisor:
         self.processes = {name: factory() for name, factory in factories.items()}
         for proc in self.processes.values():
             proc.start()
+        signal.signal(signal.SIGTERM, self._shutdown)
+        signal.signal(signal.SIGINT, self._shutdown)\
+    
+    def _shutdown(self, *_args) -> None:
+        self.stop_event.set()
+        try:
+            self.frame_queue.put_nowait(PoisonPill())
+            self.person_queue.put_nowait(PoisonPill())
+            self.vehicle_queue.put_nowait(PoisonPill())
+        except Exception:
+            pass
+        for proc in self.processes.values():
+            if proc.is_alive():
+                proc.join(timeout=2)
