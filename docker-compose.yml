@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  processor:
+    build:
+      context: .
+      dockerfile: services/processor/DockerFile
+    environment:
+      LOG_LEVEL: INFO
+      CAMERA_SOURCES: ""  # override with comma-separated sources or name=source pairs
+      FRAME_POLL_INTERVAL: "1.0"
+      QUEUE_SIZE: "256"
+    working_dir: /app/services/processor
+    command: ["python", "-m", "CamT_processor.main"]
+    tty: true
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,sys; sys.exit(0 if os.path.exists('/tmp/processor_booted') else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

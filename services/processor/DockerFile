@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r services/processor/requirements.txt
 
 WORKDIR /app/services/processor
 
-CMD ["python", "-m", "oi_processor.main"]
+CMD ["python", "-m", "CamT_processor.main"]
