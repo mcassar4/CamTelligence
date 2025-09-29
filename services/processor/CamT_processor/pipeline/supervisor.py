@@ -10,7 +10,6 @@ from ..logging_utils import configure_logging
 from .detection import DetectionWorker
 from .ingestion import IngestionWorker, parse_camera_sources
 
-
 logger = logging.getLogger("processor.supervisor")
 
 
@@ -52,8 +51,19 @@ class Supervisor:
         for proc in self.processes.values():
             proc.start()
         signal.signal(signal.SIGTERM, self._shutdown)
-        signal.signal(signal.SIGINT, self._shutdown)\
-    
+        signal.signal(signal.SIGINT, self._shutdown)
+        self._monitor(factories)
+
+    def _monitor(self, factories) -> None:
+        while not self.stop_event.is_set():
+            for name, proc in list(self.processes.items()):
+                if not proc.is_alive():
+                    logger.warning("Process died, restarting", extra={"extra_payload": {"process": name}})
+                    replacement = factories[name]()
+                    replacement.start()
+                    self.processes[name] = replacement
+            time.sleep(1)
+
     def _shutdown(self, *_args) -> None:
         self.stop_event.set()
         try:
