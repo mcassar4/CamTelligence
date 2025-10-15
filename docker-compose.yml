@@ -1,21 +1,102 @@
-version: "3.9"
-
 services:
+  postgres:
+    image: postgres:16
+    container_name: oi-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: "oi"
+      POSTGRES_PASSWORD: "oi_pass"
+      POSTGRES_DB: "intelligence"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oi} -d ${POSTGRES_DB:-intelligence}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "15432:5432"
+
+  migrations:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    profiles: ["migrate"]
+
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data/media:/data/media:ro
+      - ./services/api:/app/services/api
+      - ./services/core:/app/services/core
+    command: ["/bin/sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request,sys\nimport json\ntry:\n  resp=urllib.request.urlopen('http://localhost:8000/admin/health',timeout=5)\n  sys.exit(0 if resp.getcode()==200 else 1)\nexcept Exception:\n  sys.exit(1)\nPY"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
   processor:
     build:
       context: .
-      dockerfile: services/processor/DockerFile
-    environment:
-      LOG_LEVEL: INFO
-      CAMERA_SOURCES: ""  # override with comma-separated sources or name=source pairs
-      FRAME_POLL_INTERVAL: "1.0"
-      QUEUE_SIZE: "256"
-    working_dir: /app/services/processor
-    command: ["python", "-m", "CamT_processor.main"]
-    tty: true
+      dockerfile: services/processor/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    volumes:
+      - ./data/media:/data/media
+      - ./data/input:/data/input
+      - ./data/motion_results:/data/motion_results
+      - ./services/processor:/app/services/processor
+      - ./services/core:/app/services/core
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os,sys; sys.exit(0 if os.path.exists('/tmp/processor_booted') else 1)\""]
+      test: ["CMD-SHELL", "python - <<'PY'\nimport sys\nsys.exit(0)\nPY"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 20s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://api:8000}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3000:80"
+
+  janitor:
+    build:
+      context: .
+      dockerfile: services/processor/Dockerfile
+    command: ["python", "-m", "oi_processor.janitor.main"]
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data/media:/data/media
+    profiles: ["janitor"]
