@@ -1,0 +1,9 @@
+-e services/core
+fastapi>=0.104
+uvicorn[standard]>=0.23
+SQLAlchemy>=2.0
+pydantic>=1.10,<2.0
+psycopg2-binary>=2.9
+alembic>=1.12
+httpx>=0.25
+pytest>=7.4
