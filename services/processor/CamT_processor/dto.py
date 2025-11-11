@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Tuple
-from uuid import UUID
+from typing import List, Optional, Tuple
+from uuid import UUID, uuid4
+
+
+BoundingBox = Tuple[int, int, int, int]
 
 
 @dataclass(frozen=True)
 class PoisonPill:
     reason: str = "shutdown"
+
 
 @dataclass(frozen=True)
 class FrameJob:
@@ -17,9 +21,10 @@ class FrameJob:
     captured_at: datetime
     image_bytes: bytes
 
+
 @dataclass(frozen=True)
 class Detection:
-    bbox: Tuple[int, int, int, int]
+    bbox: BoundingBox
     score: float
     crop_bytes: bytes
 
@@ -30,7 +35,7 @@ class PersonDetections:
     camera: str
     captured_at: datetime
     frame_bytes: bytes
-    persons: list[Detection]
+    persons: List[Detection] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -39,4 +44,14 @@ class VehicleDetections:
     camera: str
     captured_at: datetime
     frame_bytes: bytes
-    vehicles: list[Detection]
+    vehicles: List[Detection] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class NotificationJob:
+    event_type: str
+    camera: str
+    occurred_at: datetime
+    crop_path: Optional[str]
+    event_id: Optional[UUID] = None
+
