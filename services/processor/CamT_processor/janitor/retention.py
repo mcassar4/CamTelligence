@@ -8,8 +8,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from oi_core import get_session
-from oi_core.models import MediaAsset, Notification, PersonEvent, VehicleEvent
+from ct_core import get_session
+from ct_core.models import MediaAsset, Notification, PersonEvent, VehicleEvent
 
 from ..config.janitor_settings import JanitorSettings
 

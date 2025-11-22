@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from oi_core.models import Setting
+from ct_core.models import Setting
 
 from ..repositories.settings_repository import SettingsRepository
 

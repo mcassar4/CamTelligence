@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from oi_core.db import engine, init_db
+from ct_core.db import engine, init_db
 
 from .core.config import get_settings
 from .routers import admin, events, media, persons, settings as settings_router, vehicles

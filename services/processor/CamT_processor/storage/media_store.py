@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 from uuid import UUID
 
-from oi_core.models import MediaType
+from ct_core.models import MediaType
 
 
 class FileSystemMediaStore:

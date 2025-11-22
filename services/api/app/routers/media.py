@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from oi_core.models import MediaAsset
+from ct_core.models import MediaAsset
 
 from ..core.config import get_settings
 from ..dependencies import db_dep

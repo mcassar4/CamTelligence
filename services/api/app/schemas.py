@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from oi_core.schemas import PersonEventSchema, VehicleEventSchema
+from ct_core.schemas import PersonEventSchema, VehicleEventSchema
 
 
 class SettingsUpdate(BaseModel):

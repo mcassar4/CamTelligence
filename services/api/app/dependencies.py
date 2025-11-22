@@ -3,7 +3,7 @@ from typing import Generator
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from oi_core.db import SessionLocal
+from ct_core.db import SessionLocal
 
 
 def get_db() -> Generator[Session, None, None]:

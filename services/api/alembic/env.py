@@ -8,8 +8,8 @@ from alembic import context
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from oi_core.models import Base  # noqa: E402
-from oi_core.config import get_db_settings  # noqa: E402
+from ct_core.models import Base  # noqa: E402
+from ct_core.config import get_db_settings  # noqa: E402
 
 config = context.config
 

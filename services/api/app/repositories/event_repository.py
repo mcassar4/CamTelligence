@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from oi_core.models import PersonEvent, VehicleEvent
+from ct_core.models import PersonEvent, VehicleEvent
 
 
 class EventRepository:

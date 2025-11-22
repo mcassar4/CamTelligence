@@ -1,6 +1,6 @@
 import logging
 
-from oi_core.db import init_db
+from ct_core.db import init_db
 
 from .config.settings import ProcessorSettings
 from .logging_utils import configure_logging

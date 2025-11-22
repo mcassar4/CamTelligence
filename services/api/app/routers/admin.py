@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from oi_core.models import Notification, PersonEvent, VehicleEvent
+from ct_core.models import Notification, PersonEvent, VehicleEvent
 
 from ..dependencies import db_dep
 

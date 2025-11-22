@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from oi_core.schemas import SettingSchema
+from ct_core.schemas import SettingSchema
 
 from ..dependencies import db_dep
 from ..schemas import SettingsUpdate
