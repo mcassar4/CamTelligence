@@ -22,6 +22,7 @@ class MovementDetector:
         warmup: int = 5,
         camera: str | None = None,
         max_foreground_ratio: float = 0.1,
+        debug_dir: str | None = None,
     ) -> None:
         self.subtractor = cv2.createBackgroundSubtractorKNN(history=history, detectShadows=False)
         self.kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -32,6 +33,7 @@ class MovementDetector:
         self.camera = camera
         self.max_foreground_ratio = max_foreground_ratio
         self._frame_idx = 0
+        self.debug_dir = debug_dir
 
     def detect(self, image: np.ndarray) -> list[tuple[int, int, int, int]]:
         frame_idx = self._frame_idx
