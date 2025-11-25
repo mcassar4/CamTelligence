@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchRecentPersons, fetchRecentVehicles, getMediaUrl } from "../api/client";
 
 export function LiveEvents() {
-  const persons = useQuery(["persons"], () => fetchRecentPersons(8), { refetchInterval: 4000 });
-  const vehicles = useQuery(["vehicles"], () => fetchRecentVehicles(8), { refetchInterval: 5000 });
+  const persons = useQuery(["persons"], () => fetchRecentPersons(100), { refetchInterval: 5000 });
+  const vehicles = useQuery(["vehicles"], () => fetchRecentVehicles(100), { refetchInterval: 5000 });
 
   return (
     <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
