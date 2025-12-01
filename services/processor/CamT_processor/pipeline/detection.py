@@ -40,7 +40,7 @@ class DetectionWorker(Process):
         self.cam_buffers_init: dict[str, bool] = {}
         self._last_queue_warn = 0.0
         self._queue_warn_interval = 5.0  # seconds
-        self.motion_overlap_threshold = 0.2  # motion must cover at least 20% of a YOLO box
+        self.motion_overlap_threshold = 0.1  # motion must cover at least 10% of a YOLO box
 
 
     def run(self) -> None:
