@@ -1,10 +1,15 @@
 import argparse
-from pathlib import Path
-from dataclasses import dataclass
-import random
 import cv2
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass
+
+
 import numpy as np
-from typing import Iterable, List, Tuple
+import os
+from pathlib import Path
+import random
+from typing import List, Tuple
+
 
 FRAME_ROOT = Path("scripts/motion_lab/frames")
 EXP_ROOT = Path("scripts/motion_lab/experiments")
@@ -110,6 +115,47 @@ def crossover(a: MotionParams, b: MotionParams) -> MotionParams:
         area_threshold=random.choice([a.area_threshold, b.area_threshold]),
         max_fg_ratio=random.choice([a.max_fg_ratio, b.max_fg_ratio]),
     )
+
+def evolutionary_search(
+    frames: List[str], generations: int = 20, pop_size: int = 24, elite: int = 4, warmup: int = 15
+) -> MotionParams:
+    population = [random_params() for _ in range(pop_size)]
+    cache: dict[str, Tuple[int, int]] = {}
+    best = None
+    max_workers = min(os.cpu_count() or 2, pop_size)
+
+    for gen in range(generations):
+        # Evaluate with caching
+        to_eval = [p for p in population if p.label() not in cache]
+        if to_eval:
+            with ProcessPoolExecutor(max_workers=max_workers) as ex:
+                futures = [
+                    ex.submit(_evaluate_worker, frames, p, warmup)
+                    for p in to_eval
+                ]
+                for fut in as_completed(futures):
+                    label, invalid, considered = fut.result()
+                    cache[label] = (invalid, considered)
+
+        scored = []
+        for p in population:
+            invalid, considered = cache[p.label()]
+            scored.append((invalid, p, invalid, considered))
+        scored.sort(key=lambda x: x[0])
+        best = scored[0]
+        print(
+            f"Gen {gen+1}/{generations}: best invalid={best[2]}/{best[3]} params={best[1].label()} max_fg_ratio={best[1].max_fg_ratio:.3f}"
+        )
+        if best[2] == 0:
+            break
+        new_pop = [item[1] for item in scored[:elite]]
+        while len(new_pop) < pop_size:
+            parents = random.sample(new_pop, k=2) if len(new_pop) >= 2 else random.sample(population, k=2)
+            child = crossover(parents[0], parents[1])
+            child = mutate(child)
+            new_pop.append(child)
+        population = new_pop
+    return best[1] if best else random_params()
 
 
 
