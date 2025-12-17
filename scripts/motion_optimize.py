@@ -2,7 +2,9 @@ import argparse
 from pathlib import Path
 from dataclasses import dataclass
 import random
-
+import cv2
+import numpy as np
+from typing import Iterable, List, Tuple
 
 FRAME_ROOT = Path("scripts/motion_lab/frames")
 EXP_ROOT = Path("scripts/motion_lab/experiments")
@@ -38,6 +40,43 @@ def random_params() -> MotionParams:
         area_threshold=random.randint(8, 8912),
         max_fg_ratio=random.uniform(0.02, 0.6),
     )
+
+def evaluate_params(frames: List[str], params: MotionParams, warmup: int = 15) -> Tuple[int, int]:
+    subtractor = cv2.createBackgroundSubtractorKNN(history=params.history, detectShadows=False)
+    kernel = np.ones((params.kernel, params.kernel), np.uint8)
+    invalid = 0
+    considered = 0
+
+    for idx, frame_path in enumerate(frames):
+        image = cv2.imread(frame_path)
+        if image is None:
+            continue
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        fg = subtractor.apply(gray)
+        _, fg = cv2.threshold(fg, params.threshold, 255, cv2.THRESH_BINARY)
+        fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, kernel)
+
+        fg_ratio = float(cv2.countNonZero(fg)) / float(fg.size)
+        if idx < warmup or fg_ratio > params.max_fg_ratio:
+            continue
+
+        contours, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        total_area = 0
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < params.min_area:
+                continue
+            total_area += int(area)
+
+        predicted = 1 if total_area >= params.area_threshold else 0
+        expected = expected_label(idx)
+        if expected is None:
+            continue
+        considered += 1
+        if predicted != expected:
+            invalid += 1
+
+    return invalid, considered
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evolutionary motion parameter optimizer (uses captured frames).")
