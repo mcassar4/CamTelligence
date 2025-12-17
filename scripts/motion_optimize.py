@@ -78,6 +78,26 @@ def evaluate_params(frames: List[str], params: MotionParams, warmup: int = 15) -
 
     return invalid, considered
 
+
+# EVOLUTIONARY ALGORITHMS
+
+def mutate(params: MotionParams, rate: float = 0.3) -> MotionParams:
+    def pick(val, low, high, step=1):
+        return max(low, min(high, val + random.randint(-step, step)))
+
+    history = pick(params.history, 4, 24, step=1) if random.random() < rate else params.history
+    kernel = random.choice([4, 8, 12]) if random.random() < rate else params.kernel
+    min_area = pick(params.min_area, 8, 2048, step=16) if random.random() < rate else params.min_area
+    threshold = pick(params.threshold, 8, 2048, step=16) if random.random() < rate else params.threshold
+    area_threshold = pick(params.area_threshold, 8, 8912, step=16) if random.random() < rate else params.area_threshold
+    max_fg_ratio = (
+        max(0.02, min(0.6, params.max_fg_ratio + random.uniform(-0.04, 0.04)))
+        if random.random() < rate
+        else params.max_fg_ratio
+    )
+    return MotionParams(history, kernel, min_area, threshold, area_threshold, max_fg_ratio)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evolutionary motion parameter optimizer (uses captured frames).")
     parser.add_argument("--optimize", action="store_true", help="Run evolutionary search.")
