@@ -12,6 +12,22 @@ def expected_label(idx: int) -> int:
     # Frames 29-34 are motion; everything else is no-motion.
     return 1 if idx in MOTION_FRAMES else 0
 
+
+@dataclass(frozen=True)
+class MotionParams:
+    history: int
+    kernel: int
+    min_area: int
+    threshold: int
+    area_threshold: int
+    max_fg_ratio: float
+
+    def label(self) -> str:
+        return (
+            f"h{self.history}_k{self.kernel}_a{self.min_area}_t{self.threshold}"
+            f"_ar{self.area_threshold}_fg{int(self.max_fg_ratio*1000)}"
+        )
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evolutionary motion parameter optimizer (uses captured frames).")
     parser.add_argument("--optimize", action="store_true", help="Run evolutionary search.")
