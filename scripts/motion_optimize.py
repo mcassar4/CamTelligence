@@ -97,6 +97,16 @@ def mutate(params: MotionParams, rate: float = 0.3) -> MotionParams:
     )
     return MotionParams(history, kernel, min_area, threshold, area_threshold, max_fg_ratio)
 
+def crossover(a: MotionParams, b: MotionParams) -> MotionParams:
+    return MotionParams(
+        history=random.choice([a.history, b.history]),
+        kernel=random.choice([a.kernel, b.kernel]),
+        min_area=random.choice([a.min_area, b.min_area]),
+        threshold=random.choice([a.threshold, b.threshold]),
+        area_threshold=random.choice([a.area_threshold, b.area_threshold]),
+        max_fg_ratio=random.choice([a.max_fg_ratio, b.max_fg_ratio]),
+    )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evolutionary motion parameter optimizer (uses captured frames).")
