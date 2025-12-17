@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from dataclasses import dataclass
+import random
 
 
 FRAME_ROOT = Path("scripts/motion_lab/frames")
@@ -27,6 +28,16 @@ class MotionParams:
             f"h{self.history}_k{self.kernel}_a{self.min_area}_t{self.threshold}"
             f"_ar{self.area_threshold}_fg{int(self.max_fg_ratio*1000)}"
         )
+
+def random_params() -> MotionParams:
+    return MotionParams(
+        history=random.randint(2, 24),
+        kernel=random.choice([4, 8, 12]),
+        min_area=random.randint(8, 2048),
+        threshold=random.randint(8, 2048),
+        area_threshold=random.randint(8, 8912),
+        max_fg_ratio=random.uniform(0.02, 0.6),
+    )
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evolutionary motion parameter optimizer (uses captured frames).")
