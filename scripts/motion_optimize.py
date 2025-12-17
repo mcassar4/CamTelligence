@@ -78,6 +78,10 @@ def evaluate_params(frames: List[str], params: MotionParams, warmup: int = 15) -
 
     return invalid, considered
 
+def _evaluate_worker(frames: List[str], params: MotionParams, warmup: int) -> Tuple[str, int, int]:
+    invalid, considered = evaluate_params(frames, params, warmup=warmup)
+    return params.label(), invalid, considered
+
 
 # EVOLUTIONARY ALGORITHMS
 
@@ -106,6 +110,8 @@ def crossover(a: MotionParams, b: MotionParams) -> MotionParams:
         area_threshold=random.choice([a.area_threshold, b.area_threshold]),
         max_fg_ratio=random.choice([a.max_fg_ratio, b.max_fg_ratio]),
     )
+
+
 
 
 def main() -> None:
