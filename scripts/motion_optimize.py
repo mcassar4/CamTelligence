@@ -1,5 +1,16 @@
 import argparse
+from pathlib import Path
+from dataclasses import dataclass
 
+
+FRAME_ROOT = Path("scripts/motion_lab/frames")
+EXP_ROOT = Path("scripts/motion_lab/experiments")
+
+# Evaluation windows: frames 29-34 contain motion; all others are no-motion.
+MOTION_FRAMES = set(range(29, 35))
+def expected_label(idx: int) -> int:
+    # Frames 29-34 are motion; everything else is no-motion.
+    return 1 if idx in MOTION_FRAMES else 0
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evolutionary motion parameter optimizer (uses captured frames).")
