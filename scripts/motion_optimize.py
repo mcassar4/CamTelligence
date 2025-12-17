@@ -1,3 +1,12 @@
+"""
+Evolutionary optimizer for motion detection parameters using captured frames.
+
+Workflow:
+  1) Capture frames: python scripts/motion_capture.py --count 60 --interval 1.0
+  2) Optimize params: python scripts/motion_optimize.py --optimize
+     (writes best artifacts under data/motion_lab/experiments/best_<label>/)
+"""
+
 import argparse
 import cv2
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -158,6 +167,49 @@ def evolutionary_search(
     return best[1] if best else random_params()
 
 
+# SAVING RESULTS
+def export_best(frames: List[Path], params: MotionParams, out_root: Path, warmup: int = 15) -> None:
+    out_dir = out_root / f"best_{params.label()}"
+    masks_dir = out_dir / "masks"
+    anno_dir = out_dir / "annotated"
+    masks_dir.mkdir(parents=True, exist_ok=True)
+    anno_dir.mkdir(parents=True, exist_ok=True)
+
+    subtractor = cv2.createBackgroundSubtractorKNN(history=params.history, detectShadows=False)
+    kernel = np.ones((params.kernel, params.kernel), np.uint8)
+
+    for idx, frame_path in enumerate(frames):
+        image = cv2.imread(str(frame_path))
+        if image is None:
+            continue
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        fg = subtractor.apply(gray)
+        _, fg = cv2.threshold(fg, params.threshold, 255, cv2.THRESH_BINARY)
+        fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, kernel)
+        fg_ratio = float(cv2.countNonZero(fg)) / float(fg.size)
+        if idx < warmup or fg_ratio > params.max_fg_ratio:
+            continue
+
+        contours, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        boxes: List[Tuple[int, int, int, int]] = []
+        total_area = 0
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area < params.min_area:
+                continue
+            x, y, w, h = cv2.boundingRect(cnt)
+            boxes.append((x, y, w, h))
+            total_area += int(area)
+
+        mask_name = masks_dir / f"mask_{idx:04d}.png"
+        cv2.imwrite(str(mask_name), fg)
+
+        annotated = image.copy()
+        for (x, y, w, h) in boxes:
+            cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), thickness=4)
+        status = "motion" if total_area >= params.area_threshold else "nomotion"
+        frame_name = anno_dir / f"frame_{idx:04d}_{status}.jpg"
+        cv2.imwrite(str(frame_name), annotated)
 
 
 def main() -> None:
@@ -168,3 +220,21 @@ def main() -> None:
     parser.add_argument("--warmup", type=int, default=15, help="Warmup frames to skip from scoring (default: 15)")
     parser.add_argument("--export-best", action="store_true", help="Export masks/annotated frames for the best params.")
     args = parser.parse_args()
+
+    frames = sorted(str(p) for p in FRAME_ROOT.glob("frame_*.jpg"))
+    if not frames:
+        raise SystemExit(f"No frames found in {FRAME_ROOT}. Capture frames first (scripts/motion_capture.py).")
+
+    if args.optimize:
+        best = evolutionary_search(frames, generations=args.generations, pop_size=args.pop_size, warmup=args.warmup)
+        invalid, considered = evaluate_params(frames, best, warmup=args.warmup)
+        print(f"Best params: {best.label()} max_fg_ratio={best.max_fg_ratio:.3f} invalid={invalid}/{considered}")
+        if args.export_best:
+            export_best(frames, best, EXP_ROOT, warmup=args.warmup)
+            print(f"Best artifacts written under {EXP_ROOT}/best_{best.label()}")
+    else:
+        parser.error("Specify --optimize to run the search.")
+
+
+if __name__ == "__main__":
+    main()
